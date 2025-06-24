@@ -6,3 +6,4 @@ ipywidgets
 # huggingface_hub[hf_xet]
 # huggingface_hub[cli]
 protobuf
+python-dotenv
