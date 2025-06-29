@@ -150,7 +150,7 @@ def send_alerting_mail(type_appel_offre : str, summary : str, url : str, scoring
     msg["From"] = mail_sender
     msg["To"] = mail_sender
     msg["Subject"] = "Nouvel appel d'offre : " + str(type_appel_offre)
-    msg.attach(MIMEText(f"""Une nouvelle offre vient d'arriver et peut correspondre à vos critère : \n\n
+    msg.attach(MIMEText(f"""Une nouvelle offre vient d'arriver et peut correspondre à vos critères : \n\n
                         Résumé : {summary} \n\n
                         url : {url} \n\n
                         Scoring de la pertinence du résumé sur la catégorie : {scoring} \n\n
