@@ -9,6 +9,15 @@ import time
 import datetime
 import pprint as pp
 import math
+from huggingface_hub import whoami
+from transformers import pipeline
+import numpy
+import smtplib, ssl
+from dotenv import load_dotenv
+import os
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
 
 def scraping_ao(url = "https://www.boamp.fr/pages/entreprise-accueil/", today = datetime.date.today().strftime("%d/%m/%Y")) -> list:
     """Fonction qui scrape les appels d'offres et renvoie une liste avec le texte
@@ -79,8 +88,90 @@ def scraping_ao(url = "https://www.boamp.fr/pages/entreprise-accueil/", today = 
         with open ('AO.log', 'a') as f:
             f.write("Appel d'offre : " + lien + " traité\n")
     driver.quit()
-    return AO
+    return AO,liens
 
 
-print(scraping_ao())
+
+def text_to_llm(ao : str) -> dict :
+    """Utilise plsuieurs LLM pour classifier, résumer et scorer un appel d'offre
+
+    Args:
+        ao (str): Le text d'un appel d'offre
+
+    Returns:
+        dict: Les résultats de LLm
+    """
+    def classifier_appel_offre(prompt_appel_offre : str, model_name : str = "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli") : 
+        classifier = pipeline("zero-shot-classification", model=model_name)
+        candidate_labels = ["Médical", "Génie civil", "Travaux", "Service", "Fourniture"]
+        output = classifier(prompt_appel_offre, candidate_labels, multi_label=False)
+        return {"Labels" : output['labels'], 
+                "Scores" : output['scores']
+            }
+    def resumer_appel_offre(prompt_appel_offre : str, model_name : str = "plguillou/t5-base-fr-sum-cnndm") :
+        summarizer = pipeline("summarization", model=model_name)
+
+        resume = summarizer(prompt_appel_offre, max_length=60, min_length=10, do_sample=False)
+        return (resume[0]['summary_text'])
+    def scoring_question(summary_prompt : str, model_name : str = "etalab-ia/camembert-base-squadFR-fquad-piaf"):
+        nlp = pipeline('question-answering', model=model_name, tokenizer='etalab-ia/camembert-base-squadFR-fquad-piaf')
+        return nlp({
+            'question': "Dans quelle catégorie se situe l'appel d'offre ?",
+            'context': summary_prompt
+        })
+    
+    classes = classifier_appel_offre(ao)
+    summary = resumer_appel_offre(ao)
+    score = scoring_question(summary)
+
+
+    return {
+        "Classes" : classes,
+        "Summary" : summary,
+        "Score" : score
+    }
+
+
+def send_alerting_mail(type_appel_offre : str, summary : str, url : str, scoring : dict):
+    """Altering par mail en cas de nouvel appel d'offre
+
+    Args:
+        type appel offre (str): La classficiation de l'appel d'offre
+        summary (str): Le résumé de l'appel d'offre
+        url (str): L'url de l'appel d'offre
+        scoring (dict): Le score de l'appel d'offre
+    """
+    
+    mail_sender = os.getenv("MAIL_SENDER")  
+    mail_password = os.getenv("MAIL_PASSWORD")
+    smtp_server = "smtp.office365.com"
+    port = 587  # TLS port
+    msg = MIMEMultipart()
+    msg["From"] = mail_sender
+    msg["To"] = mail_sender
+    msg["Subject"] = "Nouvel appel d'offre : " + str(type_appel_offre)
+    msg.attach(MIMEText(f"""Une nouvelle offre vient d'arriver et peut correspondre à vos critère : \n\n
+                        Résumé : {summary} \n\n
+                        url : {url} \n\n
+                        Scoring de la pertinence du résumé sur la catégorie : {scoring} \n\n
+                        """, "plain"))
+
+    context = ssl.create_default_context()
+    with smtplib.SMTP(smtp_server, port) as server:
+        server.starttls(context=context)
+        server.login(mail_sender, mail_password)
+        server.sendmail(mail_sender, mail_sender, msg.as_string())
+
+
+#boucler sur les appels d'offres et passer dans LLm
+
+if __name__ == "__main__":
+    load_dotenv()
+    ao_list,ao_liens = scraping_ao()
+    for idx, ao in enumerate(ao_list):
+        LLM_res = text_to_llm(ao)
+
+        if(LLM_res["Classes"]["Labels"][0] == "Fourniture"):
+            send_alerting_mail(LLM_res["Classes"]["Labels"][0], LLM_res["Summary"], ao_liens[idx], LLM_res["Score"])
+        
 
