@@ -7,3 +7,5 @@ ipywidgets
 # huggingface_hub[cli]
 protobuf
 python-dotenv
+selenium
+webdriver_manager
