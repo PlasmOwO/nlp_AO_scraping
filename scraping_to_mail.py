@@ -17,6 +17,8 @@ from dotenv import load_dotenv
 import os
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 
 def scraping_ao(url = "https://www.boamp.fr/pages/entreprise-accueil/", today = datetime.date.today().strftime("%d/%m/%Y")) -> list:
@@ -31,10 +33,12 @@ def scraping_ao(url = "https://www.boamp.fr/pages/entreprise-accueil/", today = 
     """
     options = Options()
     options.add_argument("--headless")  # Run in headless mode
-    options.binary_location ="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-    service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=service, options=options)
+    # options.binary_location ="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+    # service = Service(ChromeDriverManager().install())
+    # driver = webdriver.Chrome(service=service, options=options)
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager(driver_version="137.0.7151.122").install()),options=options)
     driver.get(url)
+    print("Chargement de la page d'accueil des appels d'offres...")
 
     #recherche des AO aujourd'hui
     time.sleep(3)
@@ -75,19 +79,33 @@ def scraping_ao(url = "https://www.boamp.fr/pages/entreprise-accueil/", today = 
             time.sleep(10)
             liens.extend([lien.get_attribute('href') for lien in driver.find_elements(By.XPATH, './/a[@class="fr-btn fr-my-1w ng-binding"]')]) # les liens
 
-
+    driver.quit()
+    print("Nombre d'appels d'offres trouvés : " + str(len(liens)))
+    print('Récupération des appels d\'offres en cours...')
     AO = []
+    open('AO.log', 'w').close()
     #AO liste = texte "clean" des X appels d'offres
     for lien in liens:
-        driver.get(lien)
-        time.sleep(5)
-        driver.find_element(By.XPATH, './/button[@class="fr-btn fr-my-1w ng-binding"]').click()
-        time.sleep(10)
-        text_ao = driver.find_element(By.XPATH, './/div[@class="ng-scope"]').text
-        AO.append(text_ao[text_ao.find("Avis n°"):text_ao.find("Date d'envoi du présent avis à la publication")])
-        with open ('AO.log', 'a') as f:
-            f.write("Appel d'offre : " + lien + " traité\n")
-    driver.quit()
+        if lien in open('AO.log').read():
+            print("Appel d'offre déjà traité" )
+        else :
+            options = Options()
+            options.add_argument('--disable-blink-features=AutomationControlled')
+            options.add_argument('--headless')  # Run in headless mode
+            driver = webdriver.Chrome(service=Service(ChromeDriverManager(driver_version="137.0.7151.122").install()),options=options)
+            driver.get(lien)
+            time.sleep(5)
+            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, './/button[@class="fr-btn fr-my-1w ng-binding"]'))).click()
+            # driver.find_element(By.XPATH, './/button[@class="fr-btn fr-my-1w ng-binding"]').click()
+            time.sleep(10)
+            # text_ao = driver.find_element(By.XPATH, './/div[@class="ng-scope"]').text
+            text_ao = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, './/div[@class="ng-scope"]'))).text
+            AO.append(text_ao[text_ao.find("Avis n°"):text_ao.find("Date d'envoi du présent avis à la publication")])
+            driver.quit()
+            with open ('AO.log', 'a') as f:
+                f.write("Appel d'offre : " + lien + " traité\n")
+            driver.quit()
+    print("Appels d'offres récupérés !")
     return AO,liens
 
 
@@ -150,7 +168,7 @@ def send_alerting_mail(type_appel_offre : str, summary : str, url : str, scoring
     msg["From"] = mail_sender
     msg["To"] = mail_sender
     msg["Subject"] = "Nouvel appel d'offre : " + str(type_appel_offre)
-    msg.attach(MIMEText(f"""Une nouvelle offre vient d'arriver et peut correspondre à vos critère : \n\n
+    msg.attach(MIMEText(f"""Une nouvelle offre vient d'arriver et peut correspondre à vos critères : \n\n
                         Résumé : {summary} \n\n
                         url : {url} \n\n
                         Scoring de la pertinence du résumé sur la catégorie : {scoring} \n\n

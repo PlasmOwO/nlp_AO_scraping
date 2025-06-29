@@ -1,6 +1,5 @@
 transformers
 torch
-numpy<2
 accelerate
 ipywidgets
 # huggingface_hub[hf_xet]
@@ -9,3 +8,5 @@ protobuf
 python-dotenv
 selenium
 webdriver_manager
+tiktoken
+numpy<2
