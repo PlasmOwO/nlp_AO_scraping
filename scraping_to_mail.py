@@ -32,11 +32,12 @@ def scraping_ao(url = "https://www.boamp.fr/pages/entreprise-accueil/", today = 
         list: Liste de textes des appels d'offres
     """
     options = Options()
-    options.add_argument("--headless")  # Run in headless mode
+    options.add_argument('--disable-blink-features=AutomationControlled')
+    # options.add_argument("--headless")  # Run in headless mode
     # options.binary_location ="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
     # service = Service(ChromeDriverManager().install())
     # driver = webdriver.Chrome(service=service, options=options)
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager(driver_version="137.0.7151.122").install()),options=options)
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()),options=options) #driver_version="137.0.7151.122"
     driver.get(url)
     print("Chargement de la page d'accueil des appels d'offres...")
 
@@ -53,60 +54,65 @@ def scraping_ao(url = "https://www.boamp.fr/pages/entreprise-accueil/", today = 
     driver.find_element(By.XPATH, './/a[@class="fr-btn"]').click()
     time.sleep(3)
 
-
+    nb_resultats = int(driver.find_element(By.XPATH, './/p[@class="fr-m-0 fr-text--lg ng-scope"]').text[:-30])
+    if nb_resultats == 0:
+        print("Aucun appel d'offre trouvé pour la date : " + today)
+        driver.quit()
+        return None, None
+    else :
     #nb pages :
-    nb_pages = math.ceil(int(driver.find_element(By.XPATH, './/p[@class="fr-m-0 fr-text--lg ng-scope"]').text[:-31])/10)
+        nb_pages = math.ceil(nb_resultats/10)
 
 
-    j=5
-    liens=[]
-    #liste de liens d'appels d'offres
-    for i in range (1, nb_pages+1):
-        if i > 6 and i != nb_pages-5:
-            # print(i)
-            driver.find_element(By.XPATH, './/div[@class="fr-container no-print"]/nav/ul/li[6]').click()
-            time.sleep(5)
-            liens.extend([lien.get_attribute('href') for lien in driver.find_elements(By.XPATH, './/a[@class="fr-btn fr-my-1w ng-binding"]')])
-        elif i == nb_pages-5:
-            # print(i)
-            j = j + 1
-            driver.find_element(By.XPATH, './/div[@class="fr-container no-print"]/nav/ul/li[' + str(j) + ']').click()
-            time.sleep(5)
-            liens.extend([lien.get_attribute('href') for lien in driver.find_elements(By.XPATH, './/a[@class="fr-btn fr-my-1w ng-binding"]')])
-        else:
-            # print(i)
-            driver.find_element(By.XPATH, './/div[@class="fr-container no-print"]/nav/ul/li[' + str(i) + ']').click()
-            time.sleep(10)
-            liens.extend([lien.get_attribute('href') for lien in driver.find_elements(By.XPATH, './/a[@class="fr-btn fr-my-1w ng-binding"]')]) # les liens
+        j=5
+        liens=[]
+        #liste de liens d'appels d'offres
+        for i in range (1, nb_pages+1):
+            if i > 6 and i != nb_pages-5:
+                # print(i)
+                driver.find_element(By.XPATH, './/div[@class="fr-container no-print"]/nav/ul/li[6]').click()
+                time.sleep(5)
+                liens.extend([lien.get_attribute('href') for lien in driver.find_elements(By.XPATH, './/a[@class="fr-btn fr-my-1w ng-binding"]')])
+            elif i == nb_pages-5:
+                # print(i)
+                j = j + 1
+                driver.find_element(By.XPATH, './/div[@class="fr-container no-print"]/nav/ul/li[' + str(j) + ']').click()
+                time.sleep(5)
+                liens.extend([lien.get_attribute('href') for lien in driver.find_elements(By.XPATH, './/a[@class="fr-btn fr-my-1w ng-binding"]')])
+            else:
+                # print(i)
+                driver.find_element(By.XPATH, './/div[@class="fr-container no-print"]/nav/ul/li[' + str(i) + ']').click()
+                time.sleep(10)
+                liens.extend([lien.get_attribute('href') for lien in driver.find_elements(By.XPATH, './/a[@class="fr-btn fr-my-1w ng-binding"]')]) # les liens
 
-    driver.quit()
-    print("Nombre d'appels d'offres trouvés : " + str(len(liens)))
-    print('Récupération des appels d\'offres en cours...')
-    AO = []
-    open('AO.log', 'w').close()
-    #AO liste = texte "clean" des X appels d'offres
-    for lien in liens:
-        if lien in open('AO.log').read():
-            print("Appel d'offre déjà traité" )
-        else :
-            options = Options()
-            options.add_argument('--disable-blink-features=AutomationControlled')
-            options.add_argument('--headless')  # Run in headless mode
-            driver = webdriver.Chrome(service=Service(ChromeDriverManager(driver_version="137.0.7151.122").install()),options=options)
-            driver.get(lien)
-            time.sleep(5)
-            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, './/button[@class="fr-btn fr-my-1w ng-binding"]'))).click()
-            # driver.find_element(By.XPATH, './/button[@class="fr-btn fr-my-1w ng-binding"]').click()
-            time.sleep(10)
-            # text_ao = driver.find_element(By.XPATH, './/div[@class="ng-scope"]').text
-            text_ao = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, './/div[@class="ng-scope"]'))).text
-            AO.append(text_ao[text_ao.find("Avis n°"):text_ao.find("Date d'envoi du présent avis à la publication")])
-            driver.quit()
-            with open ('AO.log', 'a') as f:
-                f.write("Appel d'offre : " + lien + " traité\n")
-            driver.quit()
-    print("Appels d'offres récupérés !")
-    return AO,liens
+        driver.quit()
+        print("Nombre d'appels d'offres trouvés : " + str(len(liens)))
+        print('Récupération des appels d\'offres en cours...')
+        AO = []
+        open('AO.log', 'w').close()
+        #AO liste = texte "clean" des X appels d'offres
+        for lien in liens:
+            if lien in open('AO.log').read():
+                print("Appel d'offre déjà traité" )
+            else :
+                options = Options()
+                options.add_argument('--disable-blink-features=AutomationControlled')
+                options.add_argument('--headless')  # Run in headless mode
+                driver = webdriver.Chrome(service=Service(ChromeDriverManager(driver_version="137.0.7151.122").install()),options=options)
+                driver.get(lien)
+                time.sleep(5)
+                WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, './/button[@class="fr-btn fr-my-1w ng-binding"]'))).click()
+                # driver.find_element(By.XPATH, './/button[@class="fr-btn fr-my-1w ng-binding"]').click()
+                time.sleep(10)
+                # text_ao = driver.find_element(By.XPATH, './/div[@class="ng-scope"]').text
+                text_ao = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, './/div[@class="ng-scope"]'))).text
+                AO.append(text_ao[text_ao.find("Avis n°"):text_ao.find("Date d'envoi du présent avis à la publication")])
+                driver.quit()
+                with open ('AO.log', 'a') as f:
+                    f.write("Appel d'offre : " + lien + " traité\n")
+                driver.quit()
+        print("Appels d'offres récupérés !")
+        return AO,liens
 
 
 
@@ -186,6 +192,9 @@ def send_alerting_mail(type_appel_offre : str, summary : str, url : str, scoring
 if __name__ == "__main__":
     load_dotenv()
     ao_list,ao_liens = scraping_ao()
+    if ao_list is None:
+        print("Aucun appel d'offre trouvé pour aujourd'hui.")
+        exit()
     for idx, ao in enumerate(ao_list):
         LLM_res = text_to_llm(ao)
 
