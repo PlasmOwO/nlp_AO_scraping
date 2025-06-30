@@ -6,7 +6,7 @@ Pour lancer le code (tout en 1):
 
 Pour les notebooks permettant de tester itérativement : 
 * Scraping : ```Scrapping.ipynb```
-* LLMs stuff : ``llm_test.ipynb```
+* LLMs stuff : ```llm_test.ipynb```
 * Mail alerting : ```alerting_mail.ipynb```
 
 Renseigner le fichier DOTENV : 
