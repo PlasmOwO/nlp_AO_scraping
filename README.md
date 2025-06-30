@@ -1,7 +1,7 @@
 # nlp_AO_scraping
 Projet universitaire de scraping d'appel d'offre pour de l'alerting
 
-Pour lancer le code (tout en 1): 
+Pour lancer les dépendances : 
 ```pip install -r requirements.txt```  
 
 Pour les notebooks permettant de tester itérativement : 
@@ -15,7 +15,7 @@ MAIL_SENDER = "...."
 MAIL_PASSWORD = "...."
 ```
 (fonctionne uniquement avec des adresses YNOV.com)
-Puis lancer le fichier python : scraping_to_mail.py
+Puis lancer le fichier python (tout en 1) : ```scraping_to_mail.py```
 
 Ce code va scraper plusieurs appels d'offres et seul ceux qui correspondent a la catégorie fourniture seront envoyé en alerte par mail.
 
