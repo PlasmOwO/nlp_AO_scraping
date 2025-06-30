@@ -37,7 +37,7 @@ def scraping_ao(url = "https://www.boamp.fr/pages/entreprise-accueil/", today = 
     # options.binary_location ="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
     # service = Service(ChromeDriverManager().install())
     # driver = webdriver.Chrome(service=service, options=options)
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()),options=options) #driver_version="137.0.7151.122"
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()),options=options) # driver_version="137.0.7151.122"
     driver.get(url)
     print("Chargement de la page d'accueil des appels d'offres...")
 
@@ -81,7 +81,7 @@ def scraping_ao(url = "https://www.boamp.fr/pages/entreprise-accueil/", today = 
                 liens.extend([lien.get_attribute('href') for lien in driver.find_elements(By.XPATH, './/a[@class="fr-btn fr-my-1w ng-binding"]')])
             else:
                 # print(i)
-                driver.find_element(By.XPATH, './/div[@class="fr-container no-print"]/nav/ul/li[' + str(i) + ']').click()
+                driver.find_element(By.XPATH, './/ul[@class="no-list-style ng-scope"]/li[' + str(i) + ']').click()
                 time.sleep(10)
                 liens.extend([lien.get_attribute('href') for lien in driver.find_elements(By.XPATH, './/a[@class="fr-btn fr-my-1w ng-binding"]')]) # les liens
 
@@ -91,14 +91,15 @@ def scraping_ao(url = "https://www.boamp.fr/pages/entreprise-accueil/", today = 
         AO = []
         open('AO.log', 'w').close()
         #AO liste = texte "clean" des X appels d'offres
+        # for lien in liens[:5]:
         for lien in liens:
             if lien in open('AO.log').read():
                 print("Appel d'offre déjà traité" )
             else :
                 options = Options()
                 options.add_argument('--disable-blink-features=AutomationControlled')
-                options.add_argument('--headless')  # Run in headless mode
-                driver = webdriver.Chrome(service=Service(ChromeDriverManager(driver_version="137.0.7151.122").install()),options=options)
+                # options.add_argument('--headless')  # Run in headless mode
+                driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()),options=options) # driver_version="137.0.7151.122"
                 driver.get(lien)
                 time.sleep(5)
                 WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, './/button[@class="fr-btn fr-my-1w ng-binding"]'))).click()
