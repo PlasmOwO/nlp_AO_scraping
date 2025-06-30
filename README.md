@@ -1,8 +1,13 @@
 # nlp_AO_scraping
 Projet universitaire de scraping d'appel d'offre pour de l'alerting
 
-Pour lancer le code : 
+Pour lancer le code (tout en 1): 
 ```pip install -r requirements.txt```  
+
+Pour les notebooks permettant de tester itérativement : 
+* Scraping : ```Scrapping.ipynb```
+* LLMs stuff : ``llm_test.ipynb```
+* Mail alerting : ```alerting_mail.ipynb```
 
 Renseigner le fichier DOTENV : 
 ```.env
